@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  JUCE Online Unlock API
+
+Parameters:
+  AllowedIpRanges:
+    Type: CommaDelimitedList
+    Description: List of CIDR Ranges allowed to use the Api
+
+  AppName:
+    Type: String
+    Description: Test Product Name
+    Default: TestApp
+
+  UserEmail:
+    Type: String
+    Description: Test User Email Address
+    Default: me@example.com
+
+  UserPassword:
+    Type: String
+    Description: Test User Password
+    Default: mypassword
+  
+  UserKey:
+    Type: String
+    Description: Test User Product Unlock Key
+    Default: UNLOCK_KEY_PLACEHOLDER
+
+Globals:
+  Function:
+    Timeout: 5
+
+Resources:
+  UnlockApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${AppName}-UnlockApi"
+      Auth:
+        ResourcePolicy:
+          IpRangeWhitelist: !Ref AllowedIpRanges
+      StageName: Prod
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+
+  UnlockFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: unlock_function/
+      Environment:
+        Variables:
+          USER_EMAIL: !Ref UserEmail
+          USER_PASSWORD: !Ref UserPassword
+          USER_KEY: !Ref UserKey
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Events:
+        GetPublic:
+          Type: Api
+          Properties:
+            Path: /unlock
+            RestApiId: !Ref UnlockApi
+            Method: POST
+
+Outputs:
+  UnlockApiEndpoint:
+    Description: "Unlock API endpoint URL"
+    Value: !Sub "https://${UnlockApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/unlock"
